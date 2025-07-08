@@ -9,11 +9,18 @@ export class ChatService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
   ) {}
 
-  getHistory() {
-    return this.messageModel
+  async getHistory() {
+    const result = await this.messageModel
       .find()
       .populate('user', 'username')
       .sort({ timestamp: 1 })
       .exec();
+
+    return result.map((msg) => ({
+      _id: msg._id,
+      content: msg.content,
+      timestamp: msg.timestamp,
+      username: msg.user?.username || 'Unknown',
+    }));
   }
 }
