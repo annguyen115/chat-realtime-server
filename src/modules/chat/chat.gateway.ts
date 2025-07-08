@@ -5,12 +5,14 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '@/modules/user/user.schema';
 import { Message } from '@/modules/message/message.schema';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
@@ -22,14 +24,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   constructor(
-    @InjectModel(User.name)
-    private userModel: Model<User>,
-    @InjectModel(Message.name)
-    private messageModel: Model<Message>,
+    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Message.name) private messageModel: Model<Message>,
+    private jwtService: JwtService,
   ) {}
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    const token = client.handshake.auth?.token as string;
+
+    try {
+      const payload = this.jwtService.verify(token);
+      client.data.userId = payload.sub;
+      client.data.username = payload.username;
+      console.log(`✅ Authenticated user: ${payload.username}`);
+    } catch (err) {
+      console.log('❌ Invalid token: ', err);
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -38,24 +49,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('send_message')
   async handleMessage(
-    @MessageBody() payload: { username: string; content: string },
+    @MessageBody() content: string,
+    @ConnectedSocket() client: Socket,
   ) {
-    const { username, content } = payload;
-
-    let user = await this.userModel.findOne({ username });
-
-    if (!user) {
-      user = await this.userModel.create({ username });
-    }
+    const userId = client.data.userId;
+    const username = client.data.username;
 
     const message = await this.messageModel.create({
       content,
       timestamp: new Date(),
-      user: user._id,
+      user: userId,
     });
 
     this.server.emit('receive_message', {
-      username: user.username,
+      username,
       content,
       timestamp: message.timestamp,
     });
