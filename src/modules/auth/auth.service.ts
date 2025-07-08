@@ -28,8 +28,4 @@ export class AuthService {
       },
     };
   }
-
-  async verifyToken(token: string) {
-    return this.jwtService.verify(token);
-  }
 }

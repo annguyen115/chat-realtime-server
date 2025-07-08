@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Message } from '@/modules/message/message.schema';
 import { Model } from 'mongoose';
+import { Message, MessageModel } from '@/modules/message/message.schema';
+import { ChatHistory } from '@/modules/chat/chat.interface';
 
 @Injectable()
 export class ChatService {
@@ -9,15 +10,15 @@ export class ChatService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
   ) {}
 
-  async getHistory() {
+  async getHistory(): Promise<ChatHistory[]> {
     const result = await this.messageModel
-      .find()
+      .find<MessageModel>()
       .populate('user', 'username')
       .sort({ timestamp: 1 })
       .exec();
 
-    return result.map((msg) => ({
-      _id: msg._id,
+    return result.map<ChatHistory>((msg) => ({
+      id: msg._id.toString(),
       content: msg.content,
       timestamp: msg.timestamp,
       username: msg.user?.username || 'Unknown',
