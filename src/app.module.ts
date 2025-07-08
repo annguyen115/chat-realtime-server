@@ -8,6 +8,7 @@ import { UserModule } from '@/modules/user/user.module';
 import { MessageModule } from '@/modules/message/message.module';
 import { User, UserSchema } from '@/modules/user/user.schema';
 import { Message, MessageSchema } from '@/modules/message/message.schema';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Message, MessageSchema } from '@/modules/message/message.schema';
     ]),
     UserModule,
     MessageModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, ChatGateway],
